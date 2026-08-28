@@ -1,80 +1,717 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html dir="rtl" lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الناقل - للسفر السياحة والاستقدام</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- استيراد خط عربي جميل من Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>دفتر عهدة أبو مجد الشامل</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 4px 20px rgba(0,0,0,0.05);
+  --radius: 16px;
+}
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --border: #334155;
+  --shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 40px;
+  transition: background .3s, color .3s;
+}
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 20px 16px 24px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(37,99,235,.3);
+}
+.header h1 { font-size: 22px; font-weight: 800; }
+.header p { font-size: 13px; opacity: .9; margin-top: 4px; }
+.theme-btn, .settings-btn {
+  position: absolute; top: 20px;
+  background: rgba(255,255,255,.2); border: none; color: white;
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.theme-btn { left: 16px; }
+.settings-btn { right: 16px; }
+
+.container { max-width: 500px; margin: 0 auto; padding: 16px; }
+
+/* Dashboard Cards */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: -14px;
+  margin-bottom: 16px;
+}
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.card.full { grid-column: span 2; }
+.card h3 { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+.card .val { font-size: 22px; font-weight: 800; }
+.cash .val { color: var(--success); }
+.card-spent .val { color: var(--primary); }
+.owed .val { color: var(--danger); }
+.total .val { color: var(--warning); }
+
+/* Actions */
+.actions { display: flex; gap: 10px; margin-bottom: 10px; }
+.btn {
+  flex: 1; border: none; border-radius: 50px; padding: 14px 10px;
+  font-family: 'Tajawal'; font-weight: 700; font-size: 14px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: transform .15s;
+}
+.btn:active { transform: scale(.97); }
+.btn-voice {
+  background: var(--primary); color: white;
+  box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+}
+.btn-voice.listening { background: var(--danger); animation: pulse 1s infinite; }
+.btn-manual {
+  background: var(--card); color: var(--primary);
+  border: 2px solid var(--primary);
+}
+@keyframes pulse { 50% { transform: scale(1.03); } }
+#voiceStatus {
+  text-align: center; font-size: 13px; color: var(--muted);
+  min-height: 22px; margin-bottom: 14px; font-weight: 500;
+}
+
+/* Panels */
+.panel {
+  display: none; background: var(--card); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.panel.show { display: block; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+.form-group input, .form-group select {
+  width: 100%; padding: 11px 12px; border: 1px solid var(--border);
+  border-radius: 10px; font-family: 'Tajawal'; font-size: 15px;
+  background: var(--bg); color: var(--text);
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-primary {
+  width: 100%; background: var(--success); color: white; border: none;
+  padding: 12px; border-radius: 10px; font-weight: 700; font-size: 15px;
+  cursor: pointer; font-family: 'Tajawal';
+}
+
+/* Toolbar */
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.tool-btn {
+  flex: 1; min-width: 90px; padding: 10px 6px; border-radius: 10px;
+  border: none; font-family: 'Tajawal'; font-weight: 700; font-size: 13px;
+  cursor: pointer; color: white; text-align: center;
+}
+.tool-btn.pdf { background: #dc2626; }
+.tool-btn.csv { background: #059669; }
+.tool-btn.json { background: #7c3aed; }
+.tool-btn.filter { background: #0ea5e9; }
+
+/* History List */
+.history {
+  background: var(--card); border-radius: var(--radius);
+  padding: 16px; box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.history-head {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+.history-head h3 { font-size: 16px; font-weight: 700; }
+.search-box {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 10px; margin-bottom: 12px; font-family: 'Tajawal';
+  background: var(--bg); color: var(--text); font-size: 14px;
+}
+.item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.item:last-child { border-bottom: none; }
+.item-desc { font-weight: 700; font-size: 15px; }
+.item-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.item-cat {
+  display: inline-block; font-size: 11px; padding: 2px 8px;
+  border-radius: 20px; background: #e0e7ff; color: #3730a3; margin-top: 4px; font-weight: 600;
+}
+[data-theme="dark"] .item-cat { background: #312e81; color: #c7d2fe; }
+.item-right { text-align: left; display: flex; align-items: center; gap: 8px; }
+.item-amount { font-weight: 800; color: var(--danger); font-size: 15px; }
+.item-actions button { background: none; border: none; cursor: pointer; font-size: 16px; opacity: .7; }
+.empty { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
+
+/* Stats */
+.stats { margin: 16px 0; }
+.stat-row { margin-bottom: 10px; }
+.stat-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; font-weight: 500; }
+.bar-bg { height: 8px; background: var(--border); border-radius: 10px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 10px; transition: width .5s; }
+
+/* Modal & Toast */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 100; align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--card); border-radius: 20px; padding: 20px;
+  width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0,0,0,.3);
+}
+.modal h2 { font-size: 18px; margin-bottom: 16px; text-align: center; }
+.modal .close { float: left; background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); }
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: #0f172a; color: white; padding: 12px 22px; border-radius: 50px;
+  font-size: 14px; z-index: 200; opacity: 0; transition: opacity .3s;
+  pointer-events: none; white-space: nowrap; box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+}
+.toast.show { opacity: 1; }
+
+#printArea { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+}
+</style>
 </head>
 <body>
 
-    <!-- الهيدر أو الترويسة -->
-    <header>
-        <div class="container">
-            <h1 class="logo">الناقل <span>للسفر والاستقدام</span></h1>
-            <nav>
-                <ul>
-                    <li><a href="#services">خدماتنا</a></li>
-                    <li><a href="#about">من نحن</a></li>
-                    <li><a href="#contact">تواصل معنا</a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
+<div class="header">
+  <button class="theme-btn" onclick="toggleTheme()" title="الوضع الليلي">🌙</button>
+  <button class="settings-btn" onclick="openSettings()" title="الإعدادات">⚙️</button>
+  <h1>دفتر عهدة أبو مجد</h1>
+  <p>إدارة المصروفات بدقة واحترافية</p>
+</div>
 
-    <!-- القسم الرئيسي (Hero Section) -->
-    <section class="hero">
-        <div class="container">
-            <h2>بوابتك الموثوقة لخدمات السفر وحلول الكفاءات البشرية</h2>
-            <ب>نوفر لك أفضل الترتيبات للسفر، حجز تذاكر الطيران، وحلول الاستقدام الاحترافية للكوادر المهنية والفنية بكل دقة وسرعة.</p>
-            <a href="#contact" class="btn">احجز خدمتك الآن</a>
-        </div>
-    </section>
+<div class="container">
+  <!-- لوحة الإحصائيات -->
+  <div class="dashboard">
+    <div class="card full cash">
+      <h3>العهدة النقدية المتبقية (كاش)</h3>
+      <div class="val" id="cashBalance">0 ﷼</div>
+    </div>
+    <div class="card card-spent">
+      <h3>صُرف بالبطاقة</h3>
+      <div class="val" id="cardSpent">0 ﷼</div>
+    </div>
+    <div class="card owed">
+      <h3>مطلوب من جيبي</h3>
+      <div class="val" id="owedToMe">0 ﷼</div>
+    </div>
+    <div class="card total full">
+      <h3>إجمالي المصروفات</h3>
+      <div class="val" id="totalSpent">0 ﷼</div>
+    </div>
+  </div>
 
-    <!-- قسم الخدمات -->
-    <section id="services" class="services">
-        <div class="container">
-            <h3>خدماتنا الرئيسية</h3>
-            <div class="service-grid">
-                <div class="card">
-                    <h4>حجز تذاكر الطيران</h4>
-                    <p>ترتيبات كاملة وحجوزات طيران مؤكدة لأبرز وجهات السفر بأفضل الأسعار.</p>
-                </div>
-                <div class="card">
-                    <h4>الاستقدام المهني</h4>
-                    <p>استقدام وتوفير الكوادر البشرية، الفنيين، والسائقين المدربين باحترافية عالية.</p>
-                </div>
-                <div class="card">
-                    <h4>خدمات السفر المتكاملة</h4>
-                    <p>متابعة كافة إجراءات السفر والتنسيق المباشر لتوفير الوقت والجهد على عملائنا.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+  <!-- الأزرار الرئيسية -->
+  <div class="actions">
+    <button class="btn btn-voice" id="micBtn" onclick="startVoice()">🎤 اضغط وتحدث</button>
+    <button class="btn btn-manual" onclick="togglePanel('manualPanel')">✏️ إدخال يدوي</button>
+  </div>
+  <div id="voiceStatus">جرب أن تقول: «صرفت 150 ريال بنزين كاش»</div>
 
-    <!-- قسم من نحن -->
-    <section id="about" class="about">
-        <div class="container">
-            <h3>لماذا تختار الناقل؟</h3>
-            <p>نحن نتميز بالاحترافية العالية، السرعة في الإنجاز، والموثوقية في تلبية تطلعات عملائنا عبر حلول عملية ومباشرة تلبي كافة الاحتياجات بكفاءة تامة.</p>
-        </div>
-    </section>
+  <!-- لوحة الإدخال اليدوي -->
+  <div class="panel" id="manualPanel">
+    <div class="form-row">
+      <div class="form-group">
+        <label>المبلغ</label>
+        <input type="number" id="mAmount" placeholder="0" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>طريقة الدفع</label>
+        <select id="mMethod">
+          <option value="cash">كاش (من العهدة)</option>
+          <option value="card">بطاقة صاحب العمل</option>
+          <option value="pocket">من جيبي الخاص</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>الفئة</label>
+      <select id="mCategory"></select>
+    </div>
+    <div class="form-group">
+      <label>التفاصيل / الوصف</label>
+      <input type="text" id="mDesc" placeholder="مثال: بنزين، مقاضي سكن...">
+    </div>
+    <button class="btn-primary" onclick="saveManual()">حفظ العملية</button>
+  </div>
 
-    <!-- قسم التواصل -->
-    <footer id="contact">
-        <div class="container">
-            <h3>تواصل معنا</h3>
-            <p>للاستفسارات وحجز الخدمات، يسعدنا تواصلكم معنا عبر القنوات المتاحة:</p>
-            <div class="contact-info">
-                <p>📞 الهاتف / واتساب: <strong>يتم إضافة الرقم هنا</strong></p>
-                <p>📍 الموقع: <strong>اليمن</strong></p>
-            </div>
-            <p class="copyright">&copy; 2026 الناقل. جميع الحقوق محفوظة.</p>
-        </div>
-    </footer>
+  <!-- شريط الأدوات والتقارير -->
+  <div class="toolbar">
+    <button class="tool-btn pdf" onclick="exportPDF()">📄 تقرير PDF</button>
+    <button class="tool-btn csv" onclick="exportCSV()">📊 تصدير CSV</button>
+    <button class="tool-btn json" onclick="exportJSON()">💾 حفظ نسخة</button>
+    <button class="tool-btn filter" onclick="togglePanel('filterPanel')">🔍 تصفية</button>
+  </div>
 
+  <div class="panel" id="filterPanel">
+    <input type="text" class="search-box" id="searchInput" placeholder="ابحث في الوصف أو الفئة..." oninput="renderList()">
+    <div class="form-group">
+      <label>فلترة بالطريقة</label>
+      <select id="filterMethod" onchange="renderList()">
+        <option value="all">الكل</option>
+        <option value="cash">كاش</option>
+        <option value="card">بطاقة</option>
+        <option value="pocket">جيبي</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- النسب والمخططات -->
+  <div class="stats" id="statsArea"></div>
+
+  <!-- سجل العمليات -->
+  <div class="history">
+    <div class="history-head">
+      <h3>سجل الحركات المالية</h3>
+      <button class="tool-btn" style="background:var(--danger);flex:none;padding:6px 12px;font-size:12px;" onclick="resetAll()">تصفير الحساب</button>
+    </div>
+    <div id="transactionList"></div>
+    <div class="empty" id="emptyState">لا توجد عمليات مسجلة حتى الآن<br>اضغط على الميكروفون للتحدث أو أضف يدوياً</div>
+  </div>
+</div>
+
+<!-- نافذة الإعدادات -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <button class="close" onclick="closeSettings()">×</button>
+    <h2>⚙️ إعدادات الحساب</h2>
+    <div class="form-group">
+      <label>مبلغ العهدة الابتدائية (كاش)</label>
+      <input type="number" id="sInitial" min="0" step="1">
+    </div>
+    <div class="form-group">
+      <label>إضافة فئة جديدة</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="sNewCat" placeholder="اسم الفئة" style="flex:1">
+        <button class="btn-primary" style="width:auto;padding:0 16px;" onclick="addCategory()">+</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>الفئات الحالية</label>
+      <div id="catList" style="font-size:13px;color:var(--muted);"></div>
+    </div>
+    <div class="form-group">
+      <label>استعادة نسخة احتياطية</label>
+      <input type="file" id="importFile" accept=".json" onchange="importJSON(event)">
+    </div>
+    <button class="btn-primary" onclick="saveSettings()">حفظ التغييرات</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_CATS = ['وقود','طعام','صيانة','مواصلات','مشتريات','فواتير','أخرى'];
+let state = {
+  initialCash: 2000,
+  cash: 2000,
+  card: 0,
+  pocket: 0,
+  transactions: [],
+  categories: [...DEFAULT_CATS],
+  theme: 'light'
+};
+
+function loadData() {
+  const raw = localStorage.getItem('abumajd_expense_db');
+  if (raw) {
+    try { state = { ...state, ...JSON.parse(raw) }; } catch(e) {}
+  }
+  document.documentElement.setAttribute('data-theme', state.theme);
+  updateUI();
+  renderList();
+  renderStats();
+  fillCategories();
+}
+
+function saveData() {
+  localStorage.setItem('abumajd_expense_db', JSON.stringify(state));
+}
+
+function format(n) {
+  return Number(n).toLocaleString('ar-SA') + ' ﷼';
+}
+
+function updateUI() {
+  document.getElementById('cashBalance').textContent = format(state.cash);
+  document.getElementById('cardSpent').textContent = format(state.card);
+  document.getElementById('owedToMe').textContent = format(state.pocket);
+  const total = state.card + state.pocket + (state.initialCash - state.cash);
+  document.getElementById('totalSpent').textContent = format(total);
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function togglePanel(id) {
+  document.getElementById(id).classList.toggle('show');
+}
+
+function toggleTheme() {
+  state.theme = state.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  saveData();
+}
+
+function addTx(amount, desc, method, category) {
+  amount = parseFloat(amount);
+  if (!amount || amount <= 0) return;
+
+  let methodText = 'كاش من العهدة';
+  if (method === 'card') {
+    state.card += amount;
+    methodText = 'بطاقة صاحب العمل';
+  } else if (method === 'pocket') {
+    state.pocket += amount;
+    methodText = 'من جيبي الخاص';
+  } else {
+    state.cash -= amount;
+  }
+
+  const now = new Date();
+  state.transactions.unshift({
+    id: Date.now() + Math.random(),
+    amount,
+    desc: desc || 'مصروف عام',
+    method,
+    methodText,
+    category: category || 'أخرى',
+    date: now.toLocaleDateString('ar-SA') + ' ' + now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})
+  });
+
+  updateUI();
+  renderList();
+  renderStats();
+  saveData();
+  toast('تم تسجيل ' + format(amount));
+  speak('تم تسجيل ' + amount + ' ريال');
+}
+
+function deleteTx(id) {
+  const idx = state.transactions.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  const t = state.transactions[idx];
+  if (t.method === 'card') state.card -= t.amount;
+  else if (t.method === 'pocket') state.pocket -= t.amount;
+  else state.cash += t.amount;
+
+  state.transactions.splice(idx, 1);
+  updateUI();
+  renderList();
+  renderStats();
+  saveData();
+  toast('تم حذف العملية وتعديل الحسابات');
+}
+
+function resetAll() {
+  if (!confirm('هل تريد تصفير الحساب وإعادة العهدة لرصيدها الأصلي؟')) return;
+  state.cash = state.initialCash;
+  state.card = 0;
+  state.pocket = 0;
+  state.transactions = [];
+  updateUI();
+  renderList();
+  renderStats();
+  saveData();
+  toast('تمت التصفية بنجاح');
+}
+
+function renderList() {
+  const list = document.getElementById('transactionList');
+  const empty = document.getElementById('emptyState');
+  const q = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  const fm = document.getElementById('filterMethod')?.value || 'all';
+
+  let items = state.transactions;
+  if (fm !== 'all') items = items.filter(t => t.method === fm);
+  if (q) items = items.filter(t => (t.desc + t.category + t.methodText).toLowerCase().includes(q));
+
+  list.innerHTML = '';
+  if (!items.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  items.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="item-left">
+        <div class="item-desc">${escapeHtml(t.desc)}</div>
+        <div class="item-meta">${t.methodText} · ${t.date}</div>
+        <span class="item-cat">${escapeHtml(t.category)}</span>
+      </div>
+      <div class="item-right">
+        <span class="item-amount">-${format(t.amount)}</span>
+        <div class="item-actions">
+          <button onclick="deleteTx(${t.id})" title="حذف">🗑️</button>
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function renderStats() {
+  const area = document.getElementById('statsArea');
+  if (!state.transactions.length) { area.innerHTML = ''; return; }
+
+  const byCat = {};
+  state.transactions.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
+  const total = Object.values(byCat).reduce((a,b) => a+b, 0) || 1;
+  const colors = ['#2563eb','#16a34a','#d97706','#dc2626','#7c3aed','#0ea5e9','#64748b'];
+
+  let html = '<div style="background:var(--card);border-radius:16px;padding:14px;border:1px solid var(--border);box-shadow:var(--shadow);">';
+  html += '<h3 style="font-size:14px;margin-bottom:12px;font-weight:700;">توزيع المصروفات حسب الفئة</h3>';
+  Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat, val], i) => {
+    const pct = Math.round((val / total) * 100);
+    html += `<div class="stat-row">
+      <div class="stat-label"><span>${cat}</span><span>${format(val)} (${pct}%)</span></div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${colors[i%colors.length]}"></div></div>
+    </div>`;
+  });
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fillCategories() {
+  const sel = document.getElementById('mCategory');
+  sel.innerHTML = state.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function saveManual() {
+  const amount = document.getElementById('mAmount').value;
+  const method = document.getElementById('mMethod').value;
+  const cat = document.getElementById('mCategory').value;
+  const desc = document.getElementById('mDesc').value.trim();
+  if (!amount || amount <= 0) { alert('الرجاء إدخال مبلغ صحيح'); return; }
+  addTx(amount, desc, method, cat);
+  document.getElementById('mAmount').value = '';
+  document.getElementById('mDesc').value = '';
+  document.getElementById('manualPanel').classList.remove('show');
+}
+
+/* الأوامر الصوتية */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ar-SA';
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('micBtn').innerHTML = '🔴 جاري الاستماع...';
+    document.getElementById('voiceStatus').textContent = 'تحدث الآن، أسمعك...';
+  };
+  recognition.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    document.getElementById('voiceStatus').textContent = `سمعت: «${text}»`;
+    processVoice(text);
+  };
+  recognition.onerror = () => {
+    document.getElementById('voiceStatus').textContent = 'تعذر التعرف على الصوت، حاول مرة أخرى';
+  };
+  recognition.onend = () => {
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micBtn').innerHTML = '🎤 اضغط وتحدث';
+  };
+}
+
+function startVoice() {
+  if (!recognition) {
+    alert('متصفحك لا يدعم الأوامر الصوتية المباشرة. يرجى استخدام متصفح جوجل كروم.');
+    return;
+  }
+  try { recognition.start(); } catch(e) {}
+}
+
+function processVoice(text) {
+  const m = text.match(/(\d+(?:\.\d+)?)/);
+  if (!m) { toast('لم يتم ملاحظة مبلغ في كلامك'); return; }
+  const amount = parseFloat(m[0]);
+
+  let method = 'cash';
+  if (/بطاق|فيزا|شبكة|مدى/.test(text)) method = 'card';
+  else if (/جيب|خاص|حسابي/.test(text)) method = 'pocket';
+
+  let cat = 'أخرى';
+  for (const c of state.categories) {
+    if (text.includes(c)) { cat = c; break; }
+  }
+  if (/بنزين|وقود|محطة/.test(text)) cat = 'وقود';
+  else if (/أكل|طعام|غداء|فطور|عشاء|مطعم/.test(text)) cat = 'طعام';
+  else if (/صيانة|ورشة|إصلاح/.test(text)) cat = 'صيانة';
+
+  let desc = text.replace(m[0], '').replace(/ريال|صرفت|دفعت|من|على|بطاقة|كاش|العهدة|حسابي|جيبي|شبكة/g, '').trim() || cat;
+  addTx(amount, desc, method, cat);
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ar-SA';
+  speechSynthesis.speak(u);
+}
+
+/* الإعدادات والتصدير */
+function openSettings() {
+  document.getElementById('sInitial').value = state.initialCash;
+  document.getElementById('catList').textContent = state.categories.join(' · ');
+  document.getElementById('settingsModal').classList.add('show');
+}
+function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+function addCategory() {
+  const v = document.getElementById('sNewCat').value.trim();
+  if (!v || state.categories.includes(v)) return;
+  state.categories.push(v);
+  document.getElementById('sNewCat').value = '';
+  document.getElementById('catList').textContent = state.categories.join(' · ');
+  fillCategories();
+  saveData();
+}
+function saveSettings() {
+  const val = parseFloat(document.getElementById('sInitial').value);
+  if (val >= 0) {
+    const diff = val - state.initialCash;
+    state.initialCash = val;
+    state.cash += diff;
+  }
+  saveData();
+  updateUI();
+  closeSettings();
+  toast('تم حفظ الإعدادات بنجاح');
+}
+
+function exportPDF() {
+  if (!state.transactions.length) { toast('لا توجد بيانات لتصديرها'); return; }
+  const total = state.card + state.pocket + (state.initialCash - state.cash);
+  let rows = state.transactions.map((t,i) => `
+    <tr>
+      <td style="padding:8px;border:1px solid #cbd5e1;text-align:center">${i+1}</td>
+      <td style="padding:8px;border:1px solid #cbd5e1">${t.desc}</td>
+      <td style="padding:8px;border:1px solid #cbd5e1">${t.category}</td>
+      <td style="padding:8px;border:1px solid #cbd5e1">${t.methodText}</td>
+      <td style="padding:8px;border:1px solid #cbd5e1;text-align:center">${t.amount} ﷼</td>
+      <td style="padding:8px;border:1px solid #cbd5e1;font-size:11px">${t.date}</td>
+    </tr>`).join('');
+
+  document.getElementById('printArea').innerHTML = `
+    <div style="direction:rtl;font-family:Tajawal,Arial;padding:20px">
+      <h1 style="text-align:center;color:#1d4ed8;margin-bottom:5px;">كشف حساب عهدة المصروفات</h1>
+      <p style="text-align:center;color:#64748b;margin-bottom:20px;">تقرير رسمي - إعداد السائق الخاص</p>
+      <div style="display:flex;justify-content:space-around;margin-bottom:20px;text-align:center;font-size:14px;">
+        <div style="border:1px solid #16a34a;padding:10px;border-radius:8px;">العهدة المتبقية: <strong>${state.cash} ﷼</strong></div>
+        <div style="border:1px solid #2563eb;padding:10px;border-radius:8px;">بالبطاقة: <strong>${state.card} ﷼</strong></div>
+        <div style="border:1px solid #dc2626;padding:10px;border-radius:8px;">من الجيب: <strong>${state.pocket} ﷼</strong></div>
+        <div style="border:1px solid #d97706;padding:10px;border-radius:8px;">الإجمالي: <strong>${total} ﷼</strong></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:8px;border:1px solid #cbd5e1">م</th>
+          <th style="padding:8px;border:1px solid #cbd5e1">الوصف</th>
+          <th style="padding:8px;border:1px solid #cbd5e1">الفئة</th>
+          <th style="padding:8px;border:1px solid #cbd5e1">الطريقة</th>
+          <th style="padding:8px;border:1px solid #cbd5e1">المبلغ</th>
+          <th style="padding:8px;border:1px solid #cbd5e1">التاريخ</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  setTimeout(() => window.print(), 250);
+}
+
+function exportCSV() {
+  if (!state.transactions.length) { toast('لا توجد بيانات'); return; }
+  let csv = '\uFEFFالرقم,الوصف,الفئة,طريقة الدفع,المبلغ,التاريخ\n';
+  state.transactions.forEach((t,i) => {
+    csv += `${i+1},${t.desc.replace(/,/g,' ')},${t.category},${t.methodText},${t.amount},${t.date}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `حسابات_العهدة_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('تم تنزيل ملف CSV بنجاح');
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `نسخة_احتياطية_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('تم حفظ النسخة الاحتياطية');
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.transactions) {
+        state = { ...state, ...data };
+        saveData();
+        updateUI();
+        renderList();
+        renderStats();
+        fillCategories();
+        toast('تم استعادة البيانات بنجاح');
+        closeSettings();
+      }
+    } catch(err) { alert('الملف غير صالح'); }
+  };
+  reader.readAsText(file);
+}
+
+loadData();
+</script>
 </body>
 </html>
-
