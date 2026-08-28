@@ -128,10 +128,30 @@ body {
   cursor: pointer; font-family: 'Tajawal';
 }
 
-/* Export & filter */
-.toolbar {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+/* Camera Attachment Styles */
+.camera-box {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  background: var(--bg);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
+.camera-box input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.camera-preview {
+  margin-top: 8px;
+  max-height: 100px;
+  border-radius: 8px;
+  display: none;
+  object-fit: contain;
+}
+
+/* Toolbar & History */
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .tool-btn {
   flex: 1; min-width: 100px; padding: 10px 6px; border-radius: 10px;
   border: none; font-family: 'Tajawal'; font-weight: 700; font-size: 13px;
@@ -142,7 +162,6 @@ body {
 .btn-json { background: #7c3aed; }
 .btn-filter { background: #0ea5e9; }
 
-/* History */
 .history {
   background: var(--card); border-radius: var(--radius);
   padding: 16px; box-shadow: var(--shadow); border: 1px solid var(--border);
@@ -171,13 +190,16 @@ body {
 [data-theme="dark"] .item-cat { background: #312e81; color: #c7d2fe; }
 .item-right { text-align: left; display: flex; align-items: center; gap: 8px; }
 .item-amount { font-weight: 800; color: var(--danger); font-size: 15px; }
+.item-thumb {
+  width: 36px; height: 36px; border-radius: 6px; object-fit: cover; cursor: pointer; border: 1px solid var(--border);
+}
 .item-actions button {
   background: none; border: none; cursor: pointer; font-size: 15px; opacity: .6;
 }
 .item-actions button:hover { opacity: 1; }
 .empty { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
 
-/* Stats bars */
+/* Stats */
 .stats { margin: 16px 0; }
 .stat-row { margin-bottom: 10px; }
 .stat-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
@@ -223,7 +245,7 @@ body {
   <button class="theme-btn" onclick="toggleTheme()" title="الوضع الليلي">🌙</button>
   <button class="settings-btn" onclick="openSettings()" title="الإعدادات">⚙️</button>
   <h1>مصروفاتي برو</h1>
-  <p>تتبع ذكي بالأوامر الصوتية</p>
+  <p>تتبع ذكي بالأوامر الصوتية وتوثيق الفواتير</p>
 </div>
 
 <div class="container">
@@ -277,6 +299,14 @@ body {
     <div class="form-group">
       <label>الوصف</label>
       <input type="text" id="mDesc" placeholder="مثال: بنزين، غداء...">
+    </div>
+    <div class="form-group">
+      <label>تصوير الفاتورة / المستند (اختياري)</label>
+      <div class="camera-box">
+        <span>📷 اضغط لالتقاط صورة أو اختيار ملف</span>
+        <input type="file" id="mReceipt" accept="image/*" capture="environment" onchange="previewImage(event)">
+        <img id="mReceiptPreview" class="camera-preview" alt="معاينة الفاتورة">
+      </div>
     </div>
     <button class="btn-primary" onclick="saveManual()">حفظ العملية</button>
   </div>
@@ -344,6 +374,15 @@ body {
   </div>
 </div>
 
+<!-- Image Viewer Modal -->
+<div class="modal-overlay" id="imageModal" onclick="closeImageModal()">
+  <div class="modal" style="max-width: 90vw; text-align: center;" onclick="event.stopPropagation()">
+    <button class="close" onclick="closeImageModal()">×</button>
+    <h2>📷 صورة الفاتورة / المستند</h2>
+    <img id="fullImagePreview" style="max-width: 100%; max-height: 70vh; border-radius: 8px; margin-top: 10px;" alt="صورة الفاتورة">
+  </div>
+</div>
+
 <div id="printArea"></div>
 <div class="toast" id="toast"></div>
 
@@ -359,6 +398,8 @@ let state = {
   categories: [...DEFAULT_CATS],
   theme: 'light'
 };
+
+let tempReceiptBase64 = null;
 
 function load() {
   const raw = localStorage.getItem('expensePro_v2');
@@ -377,6 +418,58 @@ function load() {
 
 function save() {
   localStorage.setItem('expensePro_v2', JSON.stringify(state));
+}
+
+// ================== المعاينة والتصوير ==================
+function previewImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // ضغط الصورة وحفظها كـ Base64 بحجم خفيف
+    resizeImage(e.target.result, 600, 600, 0.7, function(compressedBase64) {
+      tempReceiptBase64 = compressedBase64;
+      const preview = document.getElementById('mReceiptPreview');
+      preview.src = compressedBase64;
+      preview.style.display = 'block';
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function resizeImage(base64Str, maxWidth, maxHeight, quality, callback) {
+  const img = new Image();
+  img.src = base64Str;
+  img.onload = function() {
+    let canvas = document.createElement('canvas');
+    let width = img.width;
+    let height = img.height;
+    if (width > height) {
+      if (width > maxWidth) {
+        height *= maxWidth / width;
+        width = maxWidth;
+      }
+    } else {
+      if (height > maxHeight) {
+        width *= maxHeight / height;
+        height = maxHeight;
+      }
+    }
+    canvas.width = width;
+    canvas.height = height;
+    let ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+}
+
+function showImageModal(src) {
+  document.getElementById('fullImagePreview').src = src;
+  document.getElementById('imageModal').classList.add('show');
+}
+
+function closeImageModal() {
+  document.getElementById('imageModal').classList.remove('show');
 }
 
 // ================== الواجهة ==================
@@ -410,7 +503,7 @@ function toggleTheme() {
 }
 
 // ================== العمليات ==================
-function addTx(amount, desc, method, category) {
+function addTx(amount, desc, method, category, receiptImage = null) {
   amount = parseFloat(amount);
   if (!amount || amount <= 0) return;
 
@@ -426,6 +519,7 @@ function addTx(amount, desc, method, category) {
     method,
     methodText: method === 'card' ? 'بطاقة / شبكة' : method === 'pocket' ? 'من جيبي' : 'كاش من العهدة',
     category: category || 'أخرى',
+    receipt: receiptImage || null,
     date: now.toLocaleDateString('ar-SA') + ' ' + now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
     ts: now.getTime()
   });
@@ -489,6 +583,12 @@ function renderList() {
   items.forEach(t => {
     const div = document.createElement('div');
     div.className = 'item';
+    
+    let thumbHtml = '';
+    if (t.receipt) {
+      thumbHtml = `<img src="${t.receipt}" class="item-thumb" onclick="showImageModal('${t.receipt}')" title="عرض الفاتورة">`;
+    }
+
     div.innerHTML = `
       <div class="item-left">
         <div class="item-desc">${escapeHtml(t.desc)}</div>
@@ -496,6 +596,7 @@ function renderList() {
         <span class="item-cat">${escapeHtml(t.category)}</span>
       </div>
       <div class="item-right">
+        ${thumbHtml}
         <span class="item-amount">${format(t.amount)}</span>
         <div class="item-actions">
           <button onclick="deleteTx(${t.id})" title="حذف">🗑️</button>
@@ -544,10 +645,17 @@ function saveManual() {
   const method = document.getElementById('mMethod').value;
   const cat = document.getElementById('mCategory').value;
   const desc = document.getElementById('mDesc').value.trim();
+  
   if (!amount || amount <= 0) { alert('أدخل مبلغاً صحيحاً'); return; }
-  addTx(amount, desc, method, cat);
+  
+  addTx(amount, desc, method, cat, tempReceiptBase64);
+  
+  // إعادة تعيين الحقول
   document.getElementById('mAmount').value = '';
   document.getElementById('mDesc').value = '';
+  document.getElementById('mReceipt').value = '';
+  document.getElementById('mReceiptPreview').style.display = 'none';
+  tempReceiptBase64 = null;
   document.getElementById('manualPanel').classList.remove('show');
 }
 
@@ -609,7 +717,6 @@ function processVoice(text) {
   for (const c of state.categories) {
     if (text.includes(c.toLowerCase())) { cat = c; break; }
   }
-  // كلمات شائعة
   if (/بنزين|وقود|محطة/.test(text)) cat = 'وقود';
   else if (/أكل|طعام|غدا|فطور|عشاء|مطعم|قهوة/.test(text)) cat = 'طعام';
   else if (/صيانة|إصلاح/.test(text)) cat = 'صيانة';
@@ -620,7 +727,7 @@ function processVoice(text) {
     .replace(/ريال|صرفت|دفعت|من|على|بطاقة|كاش|العهدة|حسابي|جيبي|شبكة|فيزا|مدى/g, ' ')
     .replace(/\s+/g, ' ').trim() || cat;
 
-  addTx(amount, desc, method, cat);
+  addTx(amount, desc, method, cat, null);
 }
 
 function speak(text) {
@@ -726,7 +833,7 @@ function exportCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = `مصروفات_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
-  toast('تم تنزيل CSV - ارفعه على Google Drive');
+  toast('تم تنزيل CSV');
 }
 
 function exportJSON() {
@@ -767,3 +874,4 @@ load();
 </script>
 </body>
 </html>
+
