@@ -102,7 +102,7 @@
     </div>
 
     <script>
-        const CLIENT_ID = '1048203524230-5gmgpb6t6j058nosms0bce0ch0hll69n.apps.googleusercontent.com';
+        const CLIENT_ID = '1048203524230-r9kfdp7eol39qjpdfe2cpdecpef4qopt.apps.googleusercontent.com';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
         let tokenClient;
         let accessToken = null;
@@ -152,7 +152,6 @@
                 mimeType: 'application/json'
             };
 
-            // Check if file already exists to update it, or create new
             try {
                 const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='masrofati_backup.json' and trashed=false`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
@@ -165,14 +164,12 @@
                 }
 
                 if (fileId) {
-                    // Update existing file
                     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
                         method: 'PATCH',
                         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                         body: fileContent
                     });
                 } else {
-                    // Create new file
                     const form = new FormData();
                     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                     form.append('file', file);
