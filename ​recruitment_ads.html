@@ -1,385 +1,132 @@
-import sqlite3
-import re
-from datetime import datetime
-from typing import List, Tuple, Optional
-
-DB_NAME = "recruitment.db"
-HTML_FILE = "recruitment_ads.html"
-
-# ==================== 1. إعداد قاعدة البيانات ====================
-def setup_database():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS ads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source TEXT NOT NULL,
-            content TEXT NOT NULL,
-            category TEXT,
-            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # فهرسة لتسريع البحث
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_content ON ads(content)')
-    
-    # بيانات تجريبية محدّثة
-    sample_ads = [
-        ("مجموعة تليجرام الاستقدام", "متوفر عاملة منزلية فلبينية للتنازل، نقل كفالة فوري، السعر مناسب."),
-        ("موقع إلكتروني", "مطلوب استقدام عمالة صيانة ومعلمين للعمل بالخارج، تأشيرات جاهزة."),
-        ("مجموعة واتساب", "أنا سائق خاص أبحث عن نقل كفالة وشغل في الرياض"),
-        ("تويتر / إكس", "متوفر تنازل عائق سائق هندي بصك تنازل جاهز."),
-        ("تليجرام", "محتاج وظيفة مدرس لغة عربية"),
-        ("صفحة فيسبوك", "مطلوب عمال بناء وسائقين شاحنات للاستقدام الفوري من الخارج."),
-        ("تليجرام", "عاملة منزلية إندونيسية للتنازل في الرياض - نقل كفالة"),
-        ("واتساب", "أبغى وظيفة سائق في جدة"),
-        ("إكس", "استقدام عمالة منزلية فلبينية - تأشيرات متوفرة الآن"),
-        ("فيسبوك", "مطلوب استقدام سائقين خاصين من الهند"),
-    ]
-    
-    cursor.execute("DELETE FROM ads")  # تنظيف للاختبار
-    cursor.executemany(
-        "INSERT INTO ads (source, content) VALUES (?, ?)", 
-        sample_ads
-    )
-    conn.commit()
-    conn.close()
-    print("✅ تم إعداد قاعدة البيانات بنجاح")
-
-# ==================== 2. فلترة وتصنيف متقدمة ====================
-def classify_and_filter(text: str) -> Tuple[bool, Optional[str]]:
-    """
-    يرجع (مقبول؟, الفئة)
-    الفئات: تنازل | استقدام | مطلوب_عمالة | None
-    """
-    if not text or not text.strip():
-        return False, None
-    
-    text_lower = text.lower().strip()
-    
-    # ---- كلمات الحظر (الباحثون عن عمل) ----
-    negative_patterns = [
-        r'أبحث\s*عن', r'ابحث\s*عن', r'محتاج\s*وظيفة', r'ابغى\s*وظيفة',
-        r'أبقى\s*شغل', r'دور\s*على\s*شغل', r'أدور\s*كفيل',
-        r'أبغى\s*وظيفة', r'عايز\s*شغل', r'محتاج\s*كفيل',
-        r'أبحث\s*عن\s*عمل', r'ابحث\s*عن\s*وظيفة', r'أريد\s*وظيفة'
-    ]
-    
-    for pattern in negative_patterns:
-        if re.search(pattern, text_lower):
-            return False, None
-    
-    # ---- كلمات القبول + التصنيف ----
-    # 1. التنازل
-    transfer_keywords = [
-        r'تنازل', r'للتنازل', r'نقل\s*كفالة', r'صك\s*تنازل',
-        r'متوفر.*تنازل', r'متوفرة.*تنازل'
-    ]
-    for pattern in transfer_keywords:
-        if re.search(pattern, text_lower):
-            return True, "تنازل"
-    
-    # 2. الاستقدام
-    recruitment_keywords = [
-        r'استقدام', r'تأشيرات', r'تأشيرة', r'استقدام\s*فوري',
-        r'عمالة\s*من\s*الخارج'
-    ]
-    for pattern in recruitment_keywords:
-        if re.search(pattern, text_lower):
-            return True, "استقدام"
-    
-    # 3. مطلوب عمالة (أصحاب عمل)
-    demand_keywords = [
-        r'مطلوب\s*عمالة', r'مطلوب\s*استقدام', r'مطلوب\s*عمال',
-        r'مطلوب\s*سائق', r'مطلوب\s*عاملة'
-    ]
-    for pattern in demand_keywords:
-        if re.search(pattern, text_lower):
-            return True, "مطلوب_عمالة"
-    
-    # كلمات عامة إيجابية
-    general_positive = [r'متوفر', r'متوفرة']
-    for pattern in general_positive:
-        if re.search(pattern, text_lower):
-            return True, "تنازل"  # افتراضي
-    
-    return False, None
-
-# ==================== 3. تصدير إلى HTML محسّن ====================
-def export_to_html():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, source, content, date FROM ads ORDER BY date DESC")
-    all_ads = cursor.fetchall()
-    conn.close()
-
-    filtered_ads = []
-    for ad_id, source, content, date in all_ads:
-        accepted, category = classify_and_filter(content)
-        if accepted:
-            filtered_ads.append((ad_id, source, content, category, date))
-
-    # إحصائيات
-    total = len(filtered_ads)
-    count_transfer = sum(1 for a in filtered_ads if a[3] == "تنازل")
-    count_recruit = sum(1 for a in filtered_ads if a[3] == "استقدام")
-    count_demand = sum(1 for a in filtered_ads if a[3] == "مطلوب_عمالة")
-
-    html_content = f"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة إعلانات الاستقدام والتنازل</title>
+    <title>إعلانات الاستقدام والتنازل</title>
     <style>
-        :root {{
+        :root {
             --primary: #1a365d;
             --accent: #2b6cb0;
-            --success: #276749;
-            --warning: #c05621;
             --bg: #f7fafc;
-        }}
-        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
             background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
             min-height: 100vh;
             padding: 20px;
             color: #2d3748;
-        }}
-        .container {{
+        }
+        .container {
             max-width: 1100px;
             margin: 0 auto;
             background: white;
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.08);
             overflow: hidden;
-        }}
-        header {{
+        }
+        header {
             background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
             padding: 28px 30px;
             text-align: center;
-        }}
-        header h1 {{
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-            font-weight: 700;
-        }}
-        header p {{ opacity: 0.9; font-size: 0.95rem; }}
+        }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header p { opacity: 0.9; font-size: 0.95rem; }
         
-        .stats {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            padding: 20px 25px;
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            justify-content: center;
-        }}
-        .stat-card {{
-            background: white;
-            padding: 12px 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            text-align: center;
-            min-width: 120px;
-        }}
-        .stat-card .number {{
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: var(--primary);
-        }}
-        .stat-card .label {{
-            font-size: 0.8rem;
-            color: #718096;
-            margin-top: 2px;
-        }}
-        
-        .filters {{
+        .filters {
             padding: 18px 25px;
             display: flex;
             gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
             background: white;
             border-bottom: 1px solid #e2e8f0;
-        }}
-        .search-box {{
+        }
+        .search-box {
             flex: 1;
-            min-width: 220px;
             padding: 10px 16px;
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             font-size: 0.95rem;
             outline: none;
-            transition: border 0.2s;
-        }}
-        .search-box:focus {{ border-color: var(--accent); }}
-        
-        .filter-btn {{
-            padding: 8px 16px;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            background: #edf2f7;
-            color: #4a5568;
-        }}
-        .filter-btn.active, .filter-btn:hover {{
-            background: var(--accent);
-            color: white;
-        }}
-        
-        table {{
+        }
+        table {
             width: 100%;
             border-collapse: collapse;
-        }}
-        th {{
+        }
+        th {
             background: #f1f5f9;
             padding: 14px 18px;
             text-align: right;
             font-weight: 600;
             color: #475569;
-            font-size: 0.9rem;
-            border-bottom: 2px solid #e2e8f0;
-        }}
-        td {{
+        }
+        td {
             padding: 14px 18px;
             border-bottom: 1px solid #f1f5f9;
             vertical-align: top;
-        }}
-        tr:hover {{ background: #f8fafc; }}
-        
-        .source-tag {{
-            display: inline-block;
+        }
+        tr:hover { background: #f8fafc; }
+        .source-tag {
             background: #ebf8ff;
             color: #2b6cb0;
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 0.8rem;
             font-weight: 600;
-        }}
-        
-        .category {{
-            display: inline-block;
+        }
+        .category {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.78rem;
             font-weight: 700;
-        }}
-        .cat-تنازل {{ background: #c6f6d5; color: #276749; }}
-        .cat-استقدام {{ background: #bee3f8; color: #2a4365; }}
-        .cat-مطلوب_عمالة {{ background: #feebc8; color: #c05621; }}
-        
-        .date {{
-            font-size: 0.82rem;
-            color: #718096;
-            white-space: nowrap;
-        }}
-        
-        .content-cell {{
-            line-height: 1.6;
-            font-size: 0.95rem;
-        }}
-        
-        footer {{
+        }
+        .cat-تنازل { background: #c6f6d5; color: #276749; }
+        .cat-استقدام { background: #bee3f8; color: #2a4365; }
+        footer {
             text-align: center;
             padding: 16px;
             color: #a0aec0;
             font-size: 0.85rem;
             background: #f8fafc;
-        }}
-        
-        .no-results {{
-            text-align: center;
-            padding: 50px 20px;
-            color: #a0aec0;
-            display: none;
-        }}
-        
-        @media (max-width: 700px) {{
-            table {{ font-size: 0.9rem; }}
-            th, td {{ padding: 10px 12px; }}
-            .stats {{ gap: 8px; }}
-            .stat-card {{ min-width: 100px; padding: 10px; }}
-        }}
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>إعلانات الاستقدام والتنازل</h1>
-            <p>لوحة مصفاة • يتم عرض العروض فقط (بدون الباحثين عن عمل)</p>
+            <p>لوحة عرض الإعلانات المصفاة</p>
         </header>
-        
-        <div class="stats">
-            <div class="stat-card">
-                <div class="number">{total}</div>
-                <div class="label">إجمالي المطابقة</div>
-            </div>
-            <div class="stat-card">
-                <div class="number">{count_transfer}</div>
-                <div class="label">تنازل</div>
-            </div>
-            <div class="stat-card">
-                <div class="number">{count_recruit}</div>
-                <div class="label">استقدام</div>
-            </div>
-            <div class="stat-card">
-                <div class="number">{count_demand}</div>
-                <div class="label">مطلوب عمالة</div>
-            </div>
-        </div>
         
         <div class="filters">
             <input type="text" class="search-box" id="searchInput" placeholder="ابحث في الإعلانات...">
-            <button class="filter-btn active" data-filter="all">الكل</button>
-            <button class="filter-btn" data-filter="تنازل">تنازل</button>
-            <button class="filter-btn" data-filter="استقدام">استقدام</button>
-            <button class="filter-btn" data-filter="مطلوب_عمالة">مطلوب عمالة</button>
         </div>
         
         <table>
             <thead>
                 <tr>
-                    <th style="width: 18%;">المصدر</th>
-                    <th style="width: 12%;">الفئة</th>
-                    <th style="width: 55%;">نص الإعلان</th>
+                    <th style="width: 20%;">المصدر</th>
+                    <th style="width: 15%;">الفئة</th>
+                    <th style="width: 50%;">نص الإعلان</th>
                     <th style="width: 15%;">التاريخ</th>
                 </tr>
             </thead>
             <tbody id="adsTable">
-"""
-
-    for ad_id, source, content, category, date in filtered_ads:
-        # تنسيق التاريخ
-        try:
-            dt = datetime.fromisoformat(date.replace('Z', '+00:00')) if isinstance(date, str) else date
-            date_str = dt.strftime("%Y-%m-%d %H:%M") if hasattr(dt, 'strftime') else str(date)[:16]
-        except:
-            date_str = str(date)[:16]
-        
-        cat_class = f"cat-{category}"
-        html_content += f"""
-                <tr data-category="{category}">
-                    <td><span class="source-tag">{source}</span></td>
-                    <td><span class="category {cat_class}">{category.replace('_', ' ')}</span></td>
-                    <td class="content-cell">{content}</td>
-                    <td class="date">{date_str}</td>
+                <tr>
+                    <td><span class="source-tag">تليجرام</span></td>
+                    <td><span class="category cat-تنازل">تنازل</span></td>
+                    <td>متوفر عاملة منزلية فلبينية للتنازل، نقل كفالة فوري، السعر مناسب.</td>
+                    <td>2026-08-29</td>
                 </tr>
-        """
-
-    html_content += """
+                <tr>
+                    <td><span class="source-tag">تويتر / إكس</span></td>
+                    <td><span class="category cat-استقدام">استقدام</span></td>
+                    <td>استقدام عمالة منزلية فلبينية - تأشيرات متوفرة الآن.</td>
+                    <td>2026-08-29</td>
+                </tr>
             </tbody>
         </table>
-        
-        <div class="no-results" id="noResults">
-            لا توجد إعلانات مطابقة للبحث أو الفلتر الحالي
-        </div>
         
         <footer>
             تم التحديث تلقائياً • نظام فلترة الاستقدام والتنازل
@@ -389,76 +136,14 @@ def export_to_html():
     <script>
         const searchInput = document.getElementById('searchInput');
         const rows = document.querySelectorAll('#adsTable tr');
-        const noResults = document.getElementById('noResults');
-        const filterBtns = document.querySelectorAll('.filter-btn');
-        let currentFilter = 'all';
-
-        function filterTable() {
-            const query = searchInput.value.trim().toLowerCase();
-            let visibleCount = 0;
-
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
             rows.forEach(row => {
-                const category = row.dataset.category;
                 const text = row.textContent.toLowerCase();
-                const matchCategory = currentFilter === 'all' || category === currentFilter;
-                const matchSearch = !query || text.includes(query);
-
-                if (matchCategory && matchSearch) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-        }
-
-        searchInput.addEventListener('input', filterTable);
-
-        filterBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                filterBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentFilter = btn.dataset.filter;
-                filterTable();
+                row.style.display = text.includes(query) ? '' : 'none';
             });
         });
     </script>
 </body>
 </html>
-"""
 
-    with open(HTML_FILE, "w", encoding="utf-8") as f:
-        f.write(html_content)
-    
-    print(f"✅ تم إنشاء ملف HTML: {HTML_FILE}")
-    print(f"   → إجمالي الإعلانات المقبولة: {total}")
-    print(f"   → تنازل: {count_transfer} | استقدام: {count_recruit} | مطلوب عمالة: {count_demand}")
-
-# ==================== 4. إضافة إعلان جديد (اختياري) ====================
-def add_ad(source: str, content: str):
-    """إضافة إعلان جديد إلى قاعدة البيانات"""
-    accepted, category = classify_and_filter(content)
-    if not accepted:
-        print(f"❌ تم رفض الإعلان (يبدو أنه من باحث عن عمل)")
-        return False
-    
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO ads (source, content, category) VALUES (?, ?, ?)",
-        (source, content, category)
-    )
-    conn.commit()
-    conn.close()
-    print(f"✅ تم إضافة الإعلان بنجاح (الفئة: {category})")
-    return True
-
-# ==================== تشغيل ====================
-if __name__ == "__main__":
-    setup_database()
-    export_to_html()
-    
-    # مثال على إضافة إعلان جديد:
-    # add_ad("تليجرام", "متوفر تنازل عاملة منزلية فلبينية في جدة")
